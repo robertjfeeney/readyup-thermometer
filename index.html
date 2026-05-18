@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReadyUp Campaign Thermometer</title>
+<style>
+  /* ============================================================
+     EASY EDIT ZONE — change these values anytime
+     ============================================================ */
+  :root {
+    --goal: 300000;           /* Campaign goal in dollars */
+    --raised: 30500;          /* Current amount raised — update this manually */
+    --backers: 12;            /* Number of backers/donors */
+    --days-left: 60;          /* Days remaining in campaign */
+    --zeffy-url: 'https://www.zeffy.com/donation-form/YOUR-FORM-ID';
+    /* Replace YOUR-FORM-ID with your actual Zeffy donation form URL */
+
+    /* Brand colors */
+    --green: #1D9E75;
+    --green-dark: #085041;
+    --green-light: #E1F5EE;
+    --gold: #F0A500;
+    --white: #ffffff;
+    --bg: #0D1F1A;
+    --text: #ffffff;
+    --text-muted: rgba(255,255,255,0.65);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: transparent;
+    color: var(--text);
+  }
+
+  .widget {
+    background: linear-gradient(135deg, #0D1F1A 0%, #0a2e20 50%, #0D1F1A 100%);
+    border: 1px solid rgba(29,158,117,0.3);
+    border-radius: 20px;
+    padding: 40px 36px;
+    max-width: 680px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Background glow effect */
+  .widget::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    right: -100px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(29,158,117,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Mission badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(29,158,117,0.2);
+    border: 1px solid rgba(29,158,117,0.4);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--green);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+  }
+
+  .badge::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* Headline */
+  .headline {
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+  }
+
+  .headline span {
+    color: var(--green);
+  }
+
+  .subhead {
+    font-size: 15px;
+    color: var(--text-muted);
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  /* Amount raised — big number */
+  .raised-section {
+    margin-bottom: 16px;
+  }
+
+  .raised-amount {
+    font-size: clamp(42px, 8vw, 68px);
+    font-weight: 900;
+    color: var(--white);
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .raised-amount .currency {
+    font-size: 0.5em;
+    vertical-align: super;
+    color: var(--green);
+    font-weight: 700;
+  }
+
+  .raised-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Thermometer bar */
+  .thermo-wrap {
+    margin: 20px 0;
+    position: relative;
+  }
+
+  .thermo-track {
+    height: 20px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .thermo-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green-dark), var(--green), #2dd4a4);
+    border-radius: 10px;
+    transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    min-width: 20px;
+  }
+
+  .thermo-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* Percentage label on bar */
+  .thermo-pct {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    white-space: nowrap;
+  }
+
+  /* Goal markers */
+  .goal-markers {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Stats row */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 24px 0;
+  }
+
+  .stat {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 14px 12px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--white);
+    line-height: 1;
+  }
+
+  .stat-val.green { color: var(--green); }
+  .stat-val.gold { color: var(--gold); }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Stretch goals */
+  .stretch-goals {
+    margin: 20px 0;
+  }
+
+  .stretch-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+
+  .stretch-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 13px;
+  }
+
+  .stretch-item:last-child { border-bottom: none; }
+
+  .stretch-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+
+  .stretch-dot.reached {
+    background: var(--green);
+    border-color: var(--green);
+    box-shadow: 0 0 8px rgba(29,158,117,0.6);
+  }
+
+  .stretch-amount {
+    font-weight: 700;
+    color: var(--white);
+    min-width: 70px;
+  }
+
+  .stretch-desc {
+    color: var(--text-muted);
+    flex: 1;
+  }
+
+  .stretch-check {
+    color: var(--green);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* CTA button */
+  .cta-wrap {
+    margin-top: 28px;
+  }
+
+  .cta-btn {
+    display: block;
+    width: 100%;
+    padding: 18px 24px;
+    background: linear-gradient(135deg, var(--green), #2dd4a4);
+    color: white;
+    font-size: 17px;
+    font-weight: 800;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: all 0.2s;
+    box-shadow: 0 4px 24px rgba(29,158,117,0.4);
+    font-family: inherit;
+  }
+
+  .cta-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(29,158,117,0.5);
+  }
+
+  .cta-sub {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 10px;
+  }
+
+  /* Sync indicator */
+  .sync-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .sync-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .sync-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+
+  .sync-dot.live {
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  .manual-override {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .override-input {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: white;
+    font-size: 12px;
+    width: 90px;
+    font-family: inherit;
+  }
+
+  .override-input:focus {
+    outline: none;
+    border-color: var(--green);
+  }
+
+  .override-btn {
+    background: rgba(29,158,117,0.3);
+    border: 1px solid var(--green);
+    border-radius: 6px;
+    padding: 4px 10px;
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .override-btn:hover {
+    background: rgba(29,158,117,0.5);
+  }
+
+  /* Mobile */
+  @media (max-width: 480px) {
+    .widget { padding: 28px 20px; border-radius: 16px; }
+    .stats { grid-template-columns: repeat(3,1fr); gap: 8px; }
+    .stat { padding: 10px 8px; }
+    .stat-val { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="widget" id="thermometer">
+
+  <div class="badge">Live Campaign</div>
+
+  <div class="headline">
+    Help us get<br><span id="student-goal">10,000 individuals</span><br>work-ready
+  </div>
+  <div class="subhead">
+    In partnership with the Ringorang habit-formation technology, ReadyUp is providing 10,000 scholarships to students, first responders and people who need to get work-ready and upwardly mobile.
+  </div>
+
+  <!-- Big raised number -->
+  <div class="raised-section">
+    <div class="raised-amount">
+      <span class="currency">$</span><span id="raised-display">0</span>
+    </div>
+    <div class="raised-label">raised toward our <span id="goal-display">$300,000</span> goal</div>
+  </div>
+
+  <!-- Thermometer bar -->
+  <div class="thermo-wrap">
+    <div class="thermo-track">
+      <div class="thermo-fill" id="thermo-fill" style="width:0%">
+        <span class="thermo-pct" id="pct-display">0%</span>
+      </div>
+    </div>
+    <div class="goal-markers">
+      <span>$0</span>
+      <span id="quarter-mark">$75k</span>
+      <span id="half-mark">$150k</span>
+      <span id="three-quarter-mark">$225k</span>
+      <span id="goal-mark">$300k</span>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-val green" id="backers-display">0</div>
+      <div class="stat-label">Backers</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="pct-stat">0%</div>
+      <div class="stat-label">Funded</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val gold" id="days-display">60</div>
+      <div class="stat-label">Days left</div>
+    </div>
+  </div>
+
+  <!-- Stretch goals -->
+  <div class="stretch-goals">
+    <div class="stretch-title">Stretch goals</div>
+    <div class="stretch-item" data-threshold="25000">
+      <div class="stretch-dot" id="dot-1"></div>
+      <div class="stretch-amount">$25,000</div>
+      <div class="stretch-desc">Launch Cohort 1 — 250 students</div>
+      <div class="stretch-check" id="check-1"></div>
+    </div>
+    <div class="stretch-item" data-threshold="50000">
+      <div class="stretch-dot" id="dot-2"></div>
+      <div class="stretch-amount">$50,000</div>
+      <div class="stretch-desc">ACT credential partnership activated</div>
+      <div class="stretch-check" id="check-2"></div>
+    </div>
+    <div class="stretch-item" data-threshold="100000">
+      <div class="stretch-dot" id="dot-3"></div>
+      <div class="stretch-amount">$100,000</div>
+      <div class="stretch-desc">1,000 students — Cohort 2 launches</div>
+      <div class="stretch-check" id="check-3"></div>
+    </div>
+    <div class="stretch-item" data-threshold="200000">
+      <div class="stretch-dot" id="dot-4"></div>
+      <div class="stretch-amount">$200,000</div>
+      <div class="stretch-desc">Future Ready Global pilot begins</div>
+      <div class="stretch-check" id="check-4"></div>
+    </div>
+    <div class="stretch-item" data-threshold="300000">
+      <div class="stretch-dot" id="dot-5"></div>
+      <div class="stretch-amount">$300,000</div>
+      <div class="stretch-desc">10,000 students — proof of concept complete</div>
+      <div class="stretch-check" id="check-5"></div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-wrap">
+    <a class="cta-btn" id="donate-btn" href="https://www.zeffy.com/donation-form/YOUR-FORM-ID" target="_blank">
+      Back this campaign — give now
+    </a>
+    <div class="cta-sub">100% of your donation reaches students. Zeffy covers all fees.</div>
+  </div>
+
+  <!-- Sync bar -->
+  <div class="sync-bar">
+    <div class="sync-status">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-label">Not synced</span>
+    </div>
+    <div class="manual-override">
+      <input class="override-input" id="override-input" type="number" placeholder="Override $">
+      <button class="override-btn" onclick="applyOverride()">Update</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// CONFIGURATION — edit these values to update the thermometer
+// ============================================================
+const CONFIG = {
+  goal: 300000,
+  manualRaised: 45006,       // fallback if Google Sheets sync fails — update this anytime
+  backers: 6,
+  daysLeft: 60,
+  zeffyUrl: 'https://www.zeffy.com/donation-form/YOUR-FORM-ID',
+  // ↑ Replace YOUR-FORM-ID with your actual Zeffy donation form URL
+
+  // Google Sheets live CSV — auto-syncs every 60 seconds
+  sheetsUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSnU2CQ_onOwxZZ62FLtyWbC-ZLNePRBWf25dAvESz8wctDw8416V5thchdrS-Cz9U8DBof3WkVxIbG/pub?output=csv',
+
+  // Column C = Total Amount = index 2 (0-based)
+  amountColumn: 2,
+
+  // Only count Succeeded payments — column E = index 4
+  statusColumn: 4,
+  statusValue: 'Succeeded',
+};
+
+// ============================================================
+// ENGINE — no need to edit below this line
+// ============================================================
+let currentRaised = CONFIG.manualRaised;
+let syncedFromSheets = false;
+
+function formatNumber(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1).replace(/\.0$/,'') + 'M';
+  if (n >= 1000) return (n/1000).toFixed(1).replace(/\.0$/,'') + 'k';
+  return n.toLocaleString();
+}
+
+function formatFull(n) {
+  return n.toLocaleString('en-US');
+}
+
+function updateDisplay(raised) {
+  currentRaised = raised;
+  const pct = Math.min(100, (raised / CONFIG.goal) * 100);
+
+  // Animate the raised number counting up
+  animateNumber('raised-display', raised);
+
+  // Bar width
+  const fill = document.getElementById('thermo-fill');
+  setTimeout(() => { fill.style.width = Math.max(2, pct) + '%'; }, 100);
+
+  // Percentage
+  const pctStr = pct < 1 ? '<1%' : pct.toFixed(1) + '%';
+  document.getElementById('pct-display').textContent = pctStr;
+  document.getElementById('pct-stat').textContent = pctStr;
+
+  // Goal display
+  document.getElementById('goal-display').textContent = '$' + formatNumber(CONFIG.goal);
+  document.getElementById('goal-mark').textContent = '$' + formatNumber(CONFIG.goal);
+  document.getElementById('quarter-mark').textContent = '$' + formatNumber(CONFIG.goal * 0.25);
+  document.getElementById('half-mark').textContent = '$' + formatNumber(CONFIG.goal * 0.5);
+  document.getElementById('three-quarter-mark').textContent = '$' + formatNumber(CONFIG.goal * 0.75);
+
+  // Stats
+  document.getElementById('backers-display').textContent = CONFIG.backers.toLocaleString();
+  document.getElementById('days-display').textContent = CONFIG.daysLeft;
+
+  // Stretch goal dots
+  for (let i = 1; i <= 5; i++) {
+    const thresholds = [25000, 50000, 100000, 200000, 300000];
+    const dot = document.getElementById('dot-' + i);
+    const check = document.getElementById('check-' + i);
+    if (raised >= thresholds[i-1]) {
+      dot.classList.add('reached');
+      check.textContent = '✓';
+    } else {
+      dot.classList.remove('reached');
+      check.textContent = '';
+    }
+  }
+
+  // Donate button
+  document.getElementById('donate-btn').href = CONFIG.zeffyUrl;
+}
+
+function animateNumber(id, target) {
+  const el = document.getElementById(id);
+  const start = parseInt(el.textContent.replace(/,/g, '')) || 0;
+  const duration = 1200;
+  const startTime = performance.now();
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = Math.round(start + (target - start) * eased);
+    el.textContent = formatFull(current);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// Google Sheets sync
+async function syncFromSheets() {
+  if (!CONFIG.sheetsUrl) return;
+  document.getElementById('sync-dot').className = 'sync-dot';
+  document.getElementById('sync-label').textContent = 'Syncing...';
+  try {
+    const res = await fetch(CONFIG.sheetsUrl);
+    if (!res.ok) throw new Error('Fetch failed');
+    const csv = await res.text();
+    const rows = csv.trim().split('\n').slice(1); // skip header
+    let total = 0;
+    let count = 0;
+    rows.forEach(row => {
+      const cols = row.split(',');
+      const status = (cols[CONFIG.statusColumn] || '').replace(/"/g,'').trim();
+      if (CONFIG.statusValue && status.toLowerCase() !== CONFIG.statusValue.toLowerCase()) return;
+      const amt = parseFloat((cols[CONFIG.amountColumn] || '').replace(/"/g,'').trim());
+      if (!isNaN(amt) && amt > 0) {
+        total += amt;
+        count++;
+      }
+    });
+    if (total > 0) {
+      CONFIG.backers = count;
+      updateDisplay(total);
+      syncedFromSheets = true;
+      document.getElementById('sync-dot').className = 'sync-dot live';
+      document.getElementById('sync-label').textContent = 'Live · ' + new Date().toLocaleTimeString();
+    } else {
+      throw new Error('No data');
+    }
+  } catch(e) {
+    document.getElementById('sync-dot').className = 'sync-dot';
+    document.getElementById('sync-label').textContent = 'Using manual amount';
+    updateDisplay(CONFIG.manualRaised);
+  }
+}
+
+function applyOverride() {
+  const val = parseFloat(document.getElementById('override-input').value);
+  if (!isNaN(val) && val >= 0) {
+    CONFIG.manualRaised = val;
+    updateDisplay(val);
+    document.getElementById('sync-dot').className = 'sync-dot live';
+    document.getElementById('sync-label').textContent = 'Manual · updated just now';
+    document.getElementById('override-input').value = '';
+  }
+}
+
+// Allow Enter key on override input
+document.getElementById('override-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') applyOverride();
+});
+
+// Init
+updateDisplay(CONFIG.manualRaised);
+syncFromSheets();
+setInterval(syncFromSheets, 60000); // auto-sync every 60 seconds
+</script>
+
+</body>
+</html>
