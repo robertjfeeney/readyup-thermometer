@@ -618,7 +618,6 @@ function updateDisplay(raised) {
 
   // Stats
   document.getElementById('backers-display').textContent = CONFIG.backers.toLocaleString();
-  document.getElementById('days-display').textContent = CONFIG.daysLeft;
 
   // Stretch goals removed
 
@@ -643,6 +642,30 @@ function animateNumber(id, target) {
   requestAnimationFrame(step);
 }
 
+// Proper CSV row parser — handles empty fields, quoted commas, \r endings
+function parseCSVRow(row) {
+  const result = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < row.length; i++) {
+    const ch = row[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (row[i + 1] === '"') { field += '"'; i++; } // escaped quote
+        else { inQuotes = false; }
+      } else {
+        field += ch;
+      }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { result.push(field.trim()); field = ''; }
+      else { field += ch; }
+    }
+  }
+  result.push(field.trim()); // last field (trim handles trailing \r)
+  return result;
+}
+
 // Google Sheets sync with unique donor deduplication
 async function syncFromSheets() {
   if (!CONFIG.sheetsUrl) return;
@@ -650,15 +673,14 @@ async function syncFromSheets() {
   document.getElementById('sync-label').textContent = 'Syncing...';
   try {
     const res = await fetch(CONFIG.sheetsUrl);
-    if (!res.ok) throw new Error('Fetch failed');
+    if (!res.ok) throw new Error('Fetch failed: ' + res.status);
     const csv = await res.text();
-    const rows = csv.trim().split('\n').slice(1); // skip header
+    const rows = csv.trim().split(/\r?\n/).slice(1); // skip header, handle \r\n
     let total = 0;
     const uniqueDonors = new Set(); // tracks unique donors by email or name
     rows.forEach(row => {
-      // Handle CSV with quoted fields
-      const cols = row.match(/(".*?"|[^,]+)(?=,|$)/g) || row.split(',');
-      const clean = cols.map(c => c.replace(/^"|"$/g,'').trim());
+      if (!row.trim()) return; // skip blank rows
+      const clean = parseCSVRow(row);
       const status = (clean[CONFIG.statusColumn] || '').toLowerCase();
       if (CONFIG.statusValue && status !== CONFIG.statusValue.toLowerCase()) return;
       const amt = parseFloat((clean[CONFIG.amountColumn] || '').replace(/[^0-9.]/g,''));
