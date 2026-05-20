@@ -567,7 +567,7 @@ const CONFIG = {
   // ↑ Replace YOUR-FORM-ID with your actual Zeffy donation form URL
 
   // Google Sheets live CSV — auto-syncs every 60 seconds
-  sheetsUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSnU2CQ_onOwxZZ62FLtyWbC-ZLNePRBWf25dAvESz8wctDw8416V5thchdrS-Cz9U8DBof3WkVxIbG/pub?output=csv',
+  sheetsUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT6JT7lKxxqX_UmFNQ1ASCQh5syvdVj02XzJFyYnd3oXNDjeCHhmJsGVTGYksSVky0d8FsLqUVEN9gV/pub?gid=374942511&single=true&output=csv',
 
   // Column C = Total Amount = index 2 (0-based)
   amountColumn: 2,
@@ -664,8 +664,8 @@ async function syncFromSheets() {
       const amt = parseFloat((clean[CONFIG.amountColumn] || '').replace(/[^0-9.]/g,''));
       if (isNaN(amt) || amt <= 0) return;
       total += amt;
-      // Deduplicate by email (col index varies) — use Payment Date + Amount as fallback key
-      const donorKey = clean[2] || clean[0] + clean[CONFIG.amountColumn];
+      // Deduplicate by email (col 12) — fall back to name if no email
+      const donorKey = clean[12] || clean[10] + ' ' + clean[11];
       uniqueDonors.add(donorKey);
     });
     if (total > 0) {
