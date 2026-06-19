@@ -470,6 +470,32 @@
     .stat { padding: 10px 8px; }
     .stat-val { font-size: 18px; }
   }
+
+  /* Gold accent — celebration + stretch states */
+  .badge.gold { color: var(--gold); border-color: rgba(240,165,0,0.4); background: rgba(240,165,0,0.2); }
+  .badge.gold::before { background: var(--gold); }
+
+  /* Scholarship callout — stretch state */
+  .scholar {
+    display: none;
+    align-items: center;
+    gap: 14px;
+    background: rgba(240,165,0,0.08);
+    border: 1px solid rgba(240,165,0,0.3);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 16px 0;
+  }
+  .scholar-icon {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: rgba(240,165,0,0.18);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .scholar-num { font-size: 20px; font-weight: 800; line-height: 1; }
+  .scholar-num span.lbl { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+  .scholar-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -481,12 +507,12 @@
 
 <div class="widget" id="thermometer">
 
-  <div class="badge">Live Campaign</div>
+  <div class="badge" id="badge"><span id="badge-text">Live Campaign</span></div>
 
-  <div class="headline">
+  <div class="headline" id="headline">
     Help us get<br><span id="student-goal">10,000 individuals</span><br>work-ready
   </div>
-  <div class="subhead">
+  <div class="subhead" id="subhead">
     In partnership with Knowledge as a Service, your donation helps ReadyUp to award 10,000 Ringorang scholarships to students, first-responders and people who are becoming work-ready and upwardly mobile.
   </div>
 
@@ -495,7 +521,7 @@
     <div class="raised-amount">
       <span class="currency">$</span><span id="raised-display">0</span>
     </div>
-    <div class="raised-label">raised toward our <span id="goal-display">$300,000</span> goal</div>
+    <div class="raised-label" id="raised-label">raised toward our $300,000 goal</div>
   </div>
 
   <!-- Thermometer bar -->
@@ -518,7 +544,18 @@
   <div class="stats" style="grid-template-columns:1fr">
     <div class="stat">
       <div class="stat-val" id="pct-stat">0%</div>
-      <div class="stat-label">Funded</div>
+      <div class="stat-label" id="funded-label">Funded</div>
+    </div>
+  </div>
+
+  <!-- Scholarship callout — appears in stretch state -->
+  <div class="scholar" id="scholar">
+    <div class="scholar-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F0A500" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2 2 6 2s6-1 6-2v-5"/></svg>
+    </div>
+    <div>
+      <div class="scholar-num"><span id="sch-now">0</span> <span class="lbl">scholarships funded</span></div>
+      <div class="scholar-sub">Over 13,000 scholarships at our $400,000 goal!</div>
     </div>
   </div>
 
@@ -535,8 +572,6 @@
     <div class="sync-dot" id="sync-dot"></div>
     <span id="sync-label"></span>
   </div>
-    <span id="sync-label"></span>
-  </div>
 
   <!-- Admin panel — hidden, reveal with Shift+Alt+A -->
   <div id="admin-panel" style="display:none;margin-top:12px;padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(29,158,117,0.3);border-radius:8px">
@@ -548,6 +583,9 @@
     <div style="font-size:11px;color:var(--text-muted);margin-top:6px">Press Shift+Alt+A to hide</div>
   </div>
 
+  <!-- Celebration confetti — fires on scroll-into-view while oversubscribed -->
+  <canvas id="confetti" style="position:absolute;inset:0;pointer-events:none"></canvas>
+
 </div>
 
 <script>
@@ -556,6 +594,9 @@
 // ============================================================
 const CONFIG = {
   goal: 300000,
+  celebrationCeiling: 310000, // celebrate "oversubscribed" from goal up to here, then promote stretch
+  stretchGoal: 400000,        // stretch goal once past the celebration ceiling
+  costPerScholarship: 30,     // $300,000 / 10,000 Ringorang scholarships
   manualRaised: 184205,       // fallback if Google Sheets sync fails — update this anytime
   backers: 9,
   daysLeft: 60,
@@ -589,34 +630,128 @@ function formatFull(n) {
   return n.toLocaleString('en-US');
 }
 
+// Track state for confetti-on-transition and scroll-reveal
+let lastState = '';
+let inView = false;
+
+function setMarkers(target) {
+  document.getElementById('quarter-mark').textContent = '$' + formatNumber(target * 0.25);
+  document.getElementById('half-mark').textContent = '$' + formatNumber(target * 0.5);
+  document.getElementById('three-quarter-mark').textContent = '$' + formatNumber(target * 0.75);
+  document.getElementById('goal-mark').textContent = '$' + formatNumber(target);
+}
+
 function updateDisplay(raised) {
   currentRaised = raised;
-  const pct = Math.min(100, (raised / CONFIG.goal) * 100);
+
+  // Three states: climbing → celebrate oversubscribing → promote stretch goal
+  const state = raised < CONFIG.goal ? 'base'
+    : (raised < CONFIG.celebrationCeiling ? 'celebrate' : 'stretch');
+
+  const badge = document.getElementById('badge');
+  const badgeText = document.getElementById('badge-text');
+  const headline = document.getElementById('headline');
+  const subhead = document.getElementById('subhead');
+  const raisedLabel = document.getElementById('raised-label');
+  const fundedLabel = document.getElementById('funded-label');
+  const pctStat = document.getElementById('pct-stat');
+  const scholar = document.getElementById('scholar');
+  const fill = document.getElementById('thermo-fill');
+
+  let target, w;
+
+  if (state === 'base') {
+    target = CONFIG.goal; w = (raised / target) * 100;
+    badge.classList.remove('gold'); badgeText.textContent = 'Live Campaign';
+    headline.innerHTML = 'Help us get<br><span style="color:var(--green)">10,000 individuals</span><br>work-ready';
+    subhead.textContent = 'In partnership with Knowledge as a Service, your donation helps ReadyUp to award 10,000 Ringorang scholarships to students, first-responders and people who are becoming work-ready and upwardly mobile.';
+    raisedLabel.textContent = 'raised toward our $300,000 goal';
+    fundedLabel.textContent = 'Funded';
+    pctStat.style.color = 'var(--green)';
+    fill.style.background = 'linear-gradient(90deg, var(--green-dark), var(--green), #2dd4a4)';
+    scholar.style.display = 'none';
+  } else if (state === 'celebrate') {
+    target = CONFIG.goal; w = 100;
+    badge.classList.add('gold'); badgeText.textContent = 'Goal Smashed';
+    headline.innerHTML = 'We’re <span style="color:var(--gold)">oversubscribed!</span>';
+    subhead.textContent = 'Funded beyond our $300,000 goal — thank you. Every extra gift goes further.';
+    raisedLabel.textContent = 'raised — past our $300,000 goal';
+    fundedLabel.textContent = 'Of goal';
+    pctStat.style.color = 'var(--gold)';
+    fill.style.background = 'linear-gradient(90deg, var(--gold), #2dd4a4, var(--gold))';
+    scholar.style.display = 'none';
+  } else {
+    target = CONFIG.stretchGoal; w = (raised / target) * 100;
+    badge.classList.add('gold'); badgeText.textContent = 'Stretch Goal';
+    headline.innerHTML = 'Onward to our <span style="color:var(--gold)">$400,000</span> stretch goal';
+    subhead.textContent = 'Our $300,000 goal is met. Every $30 more funds another Ringorang scholarship.';
+    raisedLabel.textContent = 'raised toward our $400,000 stretch goal';
+    fundedLabel.textContent = 'Of $400k';
+    pctStat.style.color = 'var(--green)';
+    fill.style.background = 'linear-gradient(90deg, var(--green-dark), var(--green), #2dd4a4)';
+    scholar.style.display = 'flex';
+    document.getElementById('sch-now').textContent = Math.floor(raised / CONFIG.costPerScholarship).toLocaleString('en-US');
+  }
+
+  const shown = Math.min(100, w);
 
   // Animate the raised number counting up
   animateNumber('raised-display', raised);
 
-  // Bar width
-  const fill = document.getElementById('thermo-fill');
-  setTimeout(() => { fill.style.width = Math.max(2, pct) + '%'; }, 100);
+  // Bar width — held at 0 until the widget scrolls into view
+  setTimeout(() => { fill.style.width = (inView ? Math.max(2, shown) : 0) + '%'; }, 100);
 
   // Percentage
-  const pctStr = pct < 1 ? '<1%' : pct.toFixed(1) + '%';
+  const pctStr = shown < 1 ? '<1%' : shown.toFixed(1) + '%';
   document.getElementById('pct-display').textContent = pctStr;
-  document.getElementById('pct-stat').textContent = pctStr;
+  pctStat.textContent = pctStr;
 
-  // Goal display
-  document.getElementById('goal-display').textContent = '$' + formatNumber(CONFIG.goal);
-  document.getElementById('goal-mark').textContent = '$' + formatNumber(CONFIG.goal);
-  document.getElementById('quarter-mark').textContent = '$' + formatNumber(CONFIG.goal * 0.25);
-  document.getElementById('half-mark').textContent = '$' + formatNumber(CONFIG.goal * 0.5);
-  document.getElementById('three-quarter-mark').textContent = '$' + formatNumber(CONFIG.goal * 0.75);
-
-  // Stretch goals removed
+  setMarkers(target);
 
   // Donate button
   const btns = ['donate-btn', 'donate-btn-top'];
   btns.forEach(id => { const el = document.getElementById(id); if(el) el.href = CONFIG.zeffyUrl; });
+
+  // Celebrate once, when we enter the oversubscribed band in view
+  if (inView && state === 'celebrate' && lastState !== 'celebrate') burst();
+  lastState = state;
+}
+
+// ── Confetti (vanilla canvas) — green/gold/mint ──
+let _confettiParts = [], _confettiRaf = null;
+const CONFETTI_COLORS = ['#1D9E75', '#F0A500', '#2dd4a4', '#ffffff', '#085041'];
+function burst() {
+  const widget = document.getElementById('thermometer');
+  const cv = document.getElementById('confetti');
+  cv.width = widget.clientWidth; cv.height = widget.clientHeight;
+  const ctx = cv.getContext('2d');
+  _confettiParts = [];
+  for (let i = 0; i < 120; i++) {
+    _confettiParts.push({
+      x: Math.random() * cv.width, y: -10 - Math.random() * cv.height * 0.5,
+      vx: (Math.random() - 0.5) * 2.4, vy: 2 + Math.random() * 3,
+      s: 4 + Math.random() * 5, c: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+      a: 1, rot: Math.random() * 6
+    });
+  }
+  if (_confettiRaf) cancelAnimationFrame(_confettiRaf);
+  (function tick() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    let alive = false;
+    for (const p of _confettiParts) {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.04; p.rot += 0.1;
+      if (p.y > cv.height * 0.82) p.a -= 0.03;
+      if (p.a > 0) {
+        alive = true;
+        ctx.save(); ctx.globalAlpha = Math.max(0, p.a);
+        ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6);
+        ctx.restore();
+      }
+    }
+    if (alive) _confettiRaf = requestAnimationFrame(tick);
+    else ctx.clearRect(0, 0, cv.width, cv.height);
+  })();
 }
 
 function animateNumber(id, target) {
@@ -722,6 +857,23 @@ function applyOverride() {
 document.getElementById('override-input').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') applyOverride();
 });
+
+// Reveal animation + celebration fire when the widget scrolls into view
+const _widgetEl = document.getElementById('thermometer');
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting && !inView) {
+        inView = true;
+        updateDisplay(currentRaised);
+        io.disconnect();
+      }
+    });
+  }, { threshold: 0.4 });
+  io.observe(_widgetEl);
+} else {
+  inView = true;
+}
 
 // Init
 updateDisplay(CONFIG.manualRaised);
