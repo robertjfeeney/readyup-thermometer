@@ -555,7 +555,7 @@
     </div>
     <div>
       <div class="scholar-num"><span id="sch-now">0</span> <span class="lbl">scholarships funded</span></div>
-      <div class="scholar-sub">Over 13,000 scholarships at our $400,000 goal!</div>
+      <div class="scholar-sub" id="sch-goal">Over 13,000 scholarships at our $400,000 goal!</div>
     </div>
   </div>
 
@@ -679,7 +679,9 @@ function updateDisplay(raised) {
     fundedLabel.textContent = 'Of goal';
     pctStat.style.color = 'var(--gold)';
     fill.style.background = 'linear-gradient(90deg, var(--gold), #2dd4a4, var(--gold))';
-    scholar.style.display = 'none';
+    scholar.style.display = 'flex';
+    document.getElementById('sch-now').textContent = Math.floor(raised / CONFIG.costPerScholarship).toLocaleString('en-US');
+    document.getElementById('sch-goal').textContent = 'Past our 10,000-scholarship goal — thank you!';
   } else {
     target = CONFIG.stretchGoal; w = (raised / target) * 100;
     badge.classList.add('gold'); badgeText.textContent = 'Stretch Goal';
@@ -691,6 +693,7 @@ function updateDisplay(raised) {
     fill.style.background = 'linear-gradient(90deg, var(--green-dark), var(--green), #2dd4a4)';
     scholar.style.display = 'flex';
     document.getElementById('sch-now').textContent = Math.floor(raised / CONFIG.costPerScholarship).toLocaleString('en-US');
+    document.getElementById('sch-goal').textContent = 'Over 13,000 scholarships at our $400,000 goal!';
   }
 
   const shown = Math.min(100, w);
