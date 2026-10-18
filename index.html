@@ -667,6 +667,7 @@ function formatFull(n) {
 // Track state for confetti-on-transition and scroll-reveal
 let lastState = '';
 let inView = false;
+let celebrated = false;
 
 function setMarkers(target) {
   document.getElementById('quarter-mark').textContent = '$' + formatNumber(target * 0.25);
@@ -786,46 +787,63 @@ function updateDisplay(raised) {
   const btns = ['donate-btn', 'donate-btn-top'];
   btns.forEach(id => { const el = document.getElementById(id); if(el) el.href = CONFIG.zeffyUrl; });
 
-  // Celebrate once, when we enter the oversubscribed band in view
-  if (inView && state === 'celebrate' && lastState !== 'celebrate') burst();
+  // Explosive celebration once, the moment the widget is revealed while past goal
+  if (inView && state !== 'base' && !celebrated) { celebrated = true; burst(); }
   lastState = state;
 }
 
 // ── Confetti (vanilla canvas) — green/gold/mint ──
 let _confettiParts = [], _confettiRaf = null;
 const CONFETTI_COLORS = ['#1D9E75', '#F0A500', '#2dd4a4', '#ffffff', '#085041'];
+function _spawn(ox, oy, n, angMin, angMax, spdMin, spdMax) {
+  for (let i = 0; i < n; i++) {
+    const ang = angMin + Math.random() * (angMax - angMin);
+    const spd = spdMin + Math.random() * (spdMax - spdMin);
+    _confettiParts.push({
+      x: ox, y: oy,
+      vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+      s: 5 + Math.random() * 6, c: CONFETTI_COLORS[(Math.random() * CONFETTI_COLORS.length) | 0],
+      a: 1, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, life: 0
+    });
+  }
+}
+
+function _pop() {
+  const cv = document.getElementById('confetti');
+  // central explosion — full radial blast
+  _spawn(cv.width * 0.5, cv.height * 0.42, 170, 0, Math.PI * 2, 5, 15);
+  // two corner cannons firing up and inward
+  _spawn(cv.width * 0.05, cv.height * 0.98, 55, -Math.PI * 0.42, -Math.PI * 0.12, 11, 19);
+  _spawn(cv.width * 0.95, cv.height * 0.98, 55, -Math.PI * 0.88, -Math.PI * 0.58, 11, 19);
+  if (!_confettiRaf) _confettiRaf = requestAnimationFrame(_tick);
+}
+
+function _tick() {
+  const cv = document.getElementById('confetti');
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  let alive = false;
+  for (const p of _confettiParts) {
+    p.vx *= 0.99; p.vy += 0.16; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life++;
+    if (p.life > 70) p.a -= 0.02;
+    if (p.a > 0 && p.y < cv.height + 24) {
+      alive = true;
+      ctx.save(); ctx.globalAlpha = Math.max(0, p.a);
+      ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6);
+      ctx.restore();
+    }
+  }
+  if (alive) _confettiRaf = requestAnimationFrame(_tick);
+  else { _confettiRaf = null; _confettiParts = []; ctx.clearRect(0, 0, cv.width, cv.height); }
+}
+
 function burst() {
   const widget = document.getElementById('thermometer');
   const cv = document.getElementById('confetti');
   cv.width = widget.clientWidth; cv.height = widget.clientHeight;
-  const ctx = cv.getContext('2d');
-  _confettiParts = [];
-  for (let i = 0; i < 120; i++) {
-    _confettiParts.push({
-      x: Math.random() * cv.width, y: -10 - Math.random() * cv.height * 0.5,
-      vx: (Math.random() - 0.5) * 2.4, vy: 2 + Math.random() * 3,
-      s: 4 + Math.random() * 5, c: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-      a: 1, rot: Math.random() * 6
-    });
-  }
-  if (_confettiRaf) cancelAnimationFrame(_confettiRaf);
-  (function tick() {
-    ctx.clearRect(0, 0, cv.width, cv.height);
-    let alive = false;
-    for (const p of _confettiParts) {
-      p.x += p.vx; p.y += p.vy; p.vy += 0.04; p.rot += 0.1;
-      if (p.y > cv.height * 0.82) p.a -= 0.03;
-      if (p.a > 0) {
-        alive = true;
-        ctx.save(); ctx.globalAlpha = Math.max(0, p.a);
-        ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-        ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6);
-        ctx.restore();
-      }
-    }
-    if (alive) _confettiRaf = requestAnimationFrame(tick);
-    else ctx.clearRect(0, 0, cv.width, cv.height);
-  })();
+  _pop();                 // first blast
+  setTimeout(_pop, 220);  // double-pop for an explosive feel
 }
 
 function animateNumber(id, target) {
