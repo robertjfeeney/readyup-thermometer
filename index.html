@@ -731,26 +731,22 @@ function updateDisplay(raised) {
     target = CONFIG.stretchGoal2; w = (raised / target) * 100;
     badge.classList.add('gold'); badgeText.textContent = 'Goal Smashed';
     headline.innerHTML = 'We’re <span style="color:var(--gold)">oversubscribed!</span>';
-    subhead.textContent = 'We’ve blown past our $300,000 goal — now climbing to $500,000 and over 16,000 Ringorang scholarships.';
+    subhead.textContent = 'We’ve blown past our $300,000 goal — now climbing to $500,000 and nearly 17,000 Ringorang scholarships.';
     raisedLabel.textContent = 'raised — past our $300,000 goal, onward to $500,000';
     fundedLabel.textContent = 'Of our $300k goal';
     pctStat.style.color = 'var(--gold)';
     fill.style.background = 'linear-gradient(90deg, var(--gold), #2dd4a4, var(--gold))';
     scholar.style.display = 'flex';
-    document.getElementById('sch-now').textContent = Math.floor(raised / CONFIG.costPerScholarship).toLocaleString('en-US');
-    document.getElementById('sch-goal').textContent = 'Over 16,000 scholarships at our $500,000 goal!';
   } else {
     target = CONFIG.stretchGoal2; w = (raised / target) * 100;
     badge.classList.add('gold'); badgeText.textContent = '2nd Stretch Goal';
     headline.innerHTML = 'Onward to our <span style="color:var(--gold)">$500,000</span> second stretch goal';
-    subhead.textContent = 'Our $300,000 goal and $400,000 first stretch are both smashed — now reaching for $500,000 and over 16,000 Ringorang scholarships.';
+    subhead.textContent = 'Our $300,000 goal and $400,000 first stretch are both smashed — now reaching for $500,000 and nearly 17,000 Ringorang scholarships.';
     raisedLabel.textContent = 'raised toward our $500,000 second stretch goal';
     fundedLabel.textContent = 'Of our $300k goal';
     pctStat.style.color = 'var(--green)';
     fill.style.background = 'linear-gradient(90deg, var(--green-dark), var(--green), #2dd4a4)';
     scholar.style.display = 'flex';
-    document.getElementById('sch-now').textContent = Math.floor(raised / CONFIG.costPerScholarship).toLocaleString('en-US');
-    document.getElementById('sch-goal').textContent = 'Over 16,000 scholarships at our $500,000 goal!';
   }
 
   // "Funded" always measures against the original $300k goal → counts past 100%
@@ -779,6 +775,12 @@ function updateDisplay(raised) {
     document.getElementById('pct-display').textContent = '';
   }
   renderMilestones(target, raised);
+
+  // Scholarships funded so far (live), with the $500k goal framed as a round target
+  if (state !== 'base') {
+    document.getElementById('sch-now').textContent = Math.floor(raised / CONFIG.costPerScholarship).toLocaleString('en-US');
+    document.getElementById('sch-goal').textContent = 'Nearly 17,000 scholarships at our $500,000 goal';
+  }
 
   // Donate button
   const btns = ['donate-btn', 'donate-btn-top'];
