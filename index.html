@@ -260,6 +260,14 @@
   }
 
   /* $300k milestone marker (shown once stretched to $400k) */
+  .thermo-milestones {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    pointer-events: none;
+  }
   .thermo-milestone {
     position: absolute;
     top: 0;
@@ -267,7 +275,6 @@
     width: 3px;
     background: var(--gold);
     box-shadow: 0 0 8px rgba(240,165,0,0.8);
-    display: none;
     z-index: 3;
   }
   .milestone-flag {
@@ -555,7 +562,7 @@
         <span class="thermo-pct" id="pct-display">0%</span>
       </div>
     </div>
-    <div class="thermo-milestone" id="milestone"><span class="milestone-flag">$300k goal &#10003;</span></div>
+    <div class="thermo-milestones" id="milestones"></div>
     <div class="goal-markers">
       <span>$0</span>
       <span id="quarter-mark">$75k</span>
@@ -619,9 +626,11 @@
 // ============================================================
 const CONFIG = {
   goal: 300000,
-  celebrationCeiling: 310000, // celebrate "oversubscribed" from goal up to here, then promote stretch
-  stretchGoal: 400000,        // stretch goal once past the celebration ceiling
-  costPerScholarship: 30,     // $300,000 / 10,000 Ringorang scholarships
+  celebrationCeiling: 310000,   // "oversubscribed" celebration window right after the original goal
+  stretchGoal: 400000,          // first stretch — now a surpassed milestone on the bar
+  stretchGoal2: 500000,         // second stretch — current active target the bar scales to
+  milestones: [300000, 400000], // surpassed goals marked on the bar once past the original goal
+  costPerScholarship: 30,       // $300,000 / 10,000 Ringorang scholarships
   manualRaised: 184205,       // fallback if Google Sheets sync fails — update this anytime
   backers: 9,
   daysLeft: 60,
@@ -666,6 +675,29 @@ function setMarkers(target) {
   document.getElementById('goal-mark').textContent = '$' + formatNumber(target);
 }
 
+// Draw surpassed-goal milestones on the bar (only those below the active target)
+function renderMilestones(target, raised) {
+  const host = document.getElementById('milestones');
+  host.innerHTML = '';
+  CONFIG.milestones.forEach(m => {
+    if (m >= target) return;
+    const passed = raised >= m;
+    const tick = document.createElement('div');
+    tick.className = 'thermo-milestone';
+    tick.style.left = 'calc(' + ((m / target) * 100) + '% - 1.5px)';
+    const flag = document.createElement('span');
+    flag.className = 'milestone-flag';
+    flag.textContent = '$' + formatNumber(m) + (passed ? ' ✓' : '');
+    if (!passed) {
+      tick.style.background = 'rgba(255,255,255,0.35)';
+      tick.style.boxShadow = 'none';
+      flag.style.color = 'var(--text-muted)';
+    }
+    tick.appendChild(flag);
+    host.appendChild(tick);
+  });
+}
+
 function updateDisplay(raised) {
   currentRaised = raised;
 
@@ -696,36 +728,34 @@ function updateDisplay(raised) {
     fill.style.background = 'linear-gradient(90deg, var(--green-dark), var(--green), #2dd4a4)';
     scholar.style.display = 'none';
   } else if (state === 'celebrate') {
-    target = CONFIG.stretchGoal; w = (raised / target) * 100;
+    target = CONFIG.stretchGoal2; w = (raised / target) * 100;
     badge.classList.add('gold'); badgeText.textContent = 'Goal Smashed';
     headline.innerHTML = 'We’re <span style="color:var(--gold)">oversubscribed!</span>';
-    subhead.textContent = 'We’ve blown past our $300,000 goal — now stretching to $400,000 and over 13,000 Ringorang scholarships.';
-    raisedLabel.textContent = 'raised — past our $300,000 goal, onward to $400,000';
+    subhead.textContent = 'We’ve blown past our $300,000 goal — now climbing to $500,000 and over 16,000 Ringorang scholarships.';
+    raisedLabel.textContent = 'raised — past our $300,000 goal, onward to $500,000';
     fundedLabel.textContent = 'Of our $300k goal';
     pctStat.style.color = 'var(--gold)';
     fill.style.background = 'linear-gradient(90deg, var(--gold), #2dd4a4, var(--gold))';
     scholar.style.display = 'flex';
     document.getElementById('sch-now').textContent = Math.floor(raised / CONFIG.costPerScholarship).toLocaleString('en-US');
-    document.getElementById('sch-goal').textContent = 'Over 13,000 scholarships at our $400,000 goal!';
+    document.getElementById('sch-goal').textContent = 'Over 16,000 scholarships at our $500,000 goal!';
   } else {
-    target = CONFIG.stretchGoal; w = (raised / target) * 100;
-    badge.classList.add('gold'); badgeText.textContent = 'Stretch Goal';
-    headline.innerHTML = 'Onward to our <span style="color:var(--gold)">$400,000</span> stretch goal';
-    subhead.textContent = 'Our $300,000 goal is met. Every $30 more funds another Ringorang scholarship — over 13,000 at $400,000.';
-    raisedLabel.textContent = 'raised toward our $400,000 stretch goal';
+    target = CONFIG.stretchGoal2; w = (raised / target) * 100;
+    badge.classList.add('gold'); badgeText.textContent = '2nd Stretch Goal';
+    headline.innerHTML = 'Onward to our <span style="color:var(--gold)">$500,000</span> second stretch goal';
+    subhead.textContent = 'Our $300,000 goal and $400,000 first stretch are both smashed — now reaching for $500,000 and over 16,000 Ringorang scholarships.';
+    raisedLabel.textContent = 'raised toward our $500,000 second stretch goal';
     fundedLabel.textContent = 'Of our $300k goal';
     pctStat.style.color = 'var(--green)';
     fill.style.background = 'linear-gradient(90deg, var(--green-dark), var(--green), #2dd4a4)';
     scholar.style.display = 'flex';
     document.getElementById('sch-now').textContent = Math.floor(raised / CONFIG.costPerScholarship).toLocaleString('en-US');
-    document.getElementById('sch-goal').textContent = 'Over 13,000 scholarships at our $400,000 goal!';
+    document.getElementById('sch-goal').textContent = 'Over 16,000 scholarships at our $500,000 goal!';
   }
 
   // "Funded" always measures against the original $300k goal → counts past 100%
   const goalPct = (raised / CONFIG.goal) * 100;
-  const barW = Math.min(100, w); // bar fills against the active scale ($300k base, $400k once stretched)
-  const milestone = document.getElementById('milestone');
-  const tqMark = document.getElementById('three-quarter-mark');
+  const barW = Math.min(100, w); // bar fills against the active scale ($300k base, $500k once stretched)
 
   // Animate the raised number counting up
   animateNumber('raised-display', raised);
@@ -737,20 +767,18 @@ function updateDisplay(raised) {
   const pctStr = goalPct < 1 ? '<1%' : goalPct.toFixed(1) + '%';
   pctStat.textContent = pctStr;
 
-  setMarkers(target);
-
   if (state === 'base') {
+    setMarkers(target);                          // $0 / 25 / 50 / 75 / $300k on the base scale
     document.getElementById('pct-display').textContent = pctStr;
-    milestone.style.display = 'none';
-    tqMark.style.color = '';
   } else {
-    // Stretched to $400k: surface the surpassed $300k milestone, drop the inline %
+    // Stretched to $500k: endpoints only; milestone ticks carry the $300k / $400k callouts
+    document.getElementById('quarter-mark').textContent = '';
+    document.getElementById('half-mark').textContent = '';
+    document.getElementById('three-quarter-mark').textContent = '';
+    document.getElementById('goal-mark').textContent = '$' + formatNumber(target);
     document.getElementById('pct-display').textContent = '';
-    milestone.style.left = 'calc(' + ((CONFIG.goal / target) * 100) + '% - 1.5px)';
-    milestone.style.display = 'block';
-    tqMark.textContent = '$300k ✓';
-    tqMark.style.color = 'var(--gold)';
   }
+  renderMilestones(target, raised);
 
   // Donate button
   const btns = ['donate-btn', 'donate-btn-top'];
