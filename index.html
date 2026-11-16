@@ -627,9 +627,10 @@
 const CONFIG = {
   goal: 300000,
   celebrationCeiling: 310000,   // "oversubscribed" celebration window right after the original goal
-  stretchGoal: 400000,          // first stretch — now a surpassed milestone on the bar
-  stretchGoal2: 500000,         // second stretch — current active target the bar scales to
-  milestones: [300000, 400000], // surpassed goals marked on the bar once past the original goal
+  stretchGoal: 400000,                  // first stretch — now a surpassed milestone
+  stretchGoal2: 500000,                 // second stretch — now a surpassed milestone
+  stretchGoal3: 600000,                 // third stretch — current active target (= 20,000 scholarships, double the mission)
+  milestones: [300000, 400000, 500000], // surpassed goals marked on the bar once past the original goal
   costPerScholarship: 30,       // $300,000 / 10,000 Ringorang scholarships
   manualRaised: 184205,       // fallback if Google Sheets sync fails — update this anytime
   backers: 9,
@@ -729,21 +730,21 @@ function updateDisplay(raised) {
     fill.style.background = 'linear-gradient(90deg, var(--green-dark), var(--green), #2dd4a4)';
     scholar.style.display = 'none';
   } else if (state === 'celebrate') {
-    target = CONFIG.stretchGoal2; w = (raised / target) * 100;
+    target = CONFIG.stretchGoal3; w = (raised / target) * 100;
     badge.classList.add('gold'); badgeText.textContent = 'Goal Smashed';
     headline.innerHTML = 'We’re <span style="color:var(--gold)">oversubscribed!</span>';
-    subhead.textContent = 'We’ve blown past our $300,000 goal — now climbing to $500,000 and nearly 17,000 Ringorang scholarships.';
-    raisedLabel.textContent = 'raised — past our $300,000 goal, onward to $500,000';
+    subhead.textContent = 'We’ve blown past our $300,000 goal — now climbing to $600,000 and 20,000 Ringorang scholarships, double our original goal.';
+    raisedLabel.textContent = 'raised — past our $300,000 goal, onward to $600,000';
     fundedLabel.textContent = 'Of our $300k goal';
     pctStat.style.color = 'var(--gold)';
     fill.style.background = 'linear-gradient(90deg, var(--gold), #2dd4a4, var(--gold))';
     scholar.style.display = 'flex';
   } else {
-    target = CONFIG.stretchGoal2; w = (raised / target) * 100;
-    badge.classList.add('gold'); badgeText.textContent = '2nd Stretch Goal';
-    headline.innerHTML = 'Onward to our <span style="color:var(--gold)">$500,000</span> second stretch goal';
-    subhead.textContent = 'Our $300,000 goal and $400,000 first stretch are both smashed — now reaching for $500,000 and nearly 17,000 Ringorang scholarships.';
-    raisedLabel.textContent = 'raised toward our $500,000 second stretch goal';
+    target = CONFIG.stretchGoal3; w = (raised / target) * 100;
+    badge.classList.add('gold'); badgeText.textContent = '3rd Stretch Goal';
+    headline.innerHTML = 'Onward to <span style="color:var(--gold)">20,000 scholarships</span> at $600,000';
+    subhead.textContent = 'Our $300,000 goal and the $400,000 and $500,000 stretches are all smashed — $600,000 funds 20,000 Ringorang scholarships, double our original goal.';
+    raisedLabel.textContent = 'raised toward our $600,000 third stretch goal';
     fundedLabel.textContent = 'Of our $300k goal';
     pctStat.style.color = 'var(--green)';
     fill.style.background = 'linear-gradient(90deg, var(--green-dark), var(--green), #2dd4a4)';
@@ -777,10 +778,10 @@ function updateDisplay(raised) {
   }
   renderMilestones(target, raised);
 
-  // Scholarships funded so far (live), with the $500k goal framed as a round target
+  // Scholarships funded so far (live); $600k = exactly 20,000, double the original mission
   if (state !== 'base') {
     document.getElementById('sch-now').textContent = Math.floor(raised / CONFIG.costPerScholarship).toLocaleString('en-US');
-    document.getElementById('sch-goal').textContent = 'Nearly 17,000 scholarships at our $500,000 goal';
+    document.getElementById('sch-goal').textContent = '20,000 scholarships at our $600,000 goal — double our original goal!';
   }
 
   // Donate button
