@@ -690,8 +690,11 @@ function renderMilestones(target, raised) {
     const flag = document.createElement('span');
     flag.className = 'milestone-flag';
     flag.textContent = '$' + formatNumber(m) + (passed ? ' ✓' : '');
-    if (!passed) {
-      tick.style.background = 'rgba(255,255,255,0.35)';
+    if (passed) {
+      tick.style.background = '#0d1f1a';                 // dark tick reads against the gold fill
+      tick.style.boxShadow = '0 0 6px rgba(0,0,0,0.45)';
+    } else {
+      tick.style.background = 'rgba(255,255,255,0.35)';  // light tick reads against the dark track
       tick.style.boxShadow = 'none';
       flag.style.color = 'var(--text-muted)';
     }
@@ -742,12 +745,12 @@ function updateDisplay(raised) {
   } else {
     target = CONFIG.stretchGoal3; w = (raised / target) * 100;
     badge.classList.add('gold'); badgeText.textContent = '3rd Stretch Goal';
-    headline.innerHTML = 'Onward to <span style="color:var(--gold)">20,000 scholarships</span> at $600,000';
+    headline.innerHTML = 'Let’s make <span style="color:var(--gold)">20,000 scholarships</span> happen at $600,000';
     subhead.textContent = 'Our $300,000 goal and the $400,000 and $500,000 stretches are all smashed — $600,000 funds 20,000 Ringorang scholarships, double our original goal.';
     raisedLabel.textContent = 'raised toward our $600,000 third stretch goal';
     fundedLabel.textContent = 'Of our $300k goal';
-    pctStat.style.color = 'var(--green)';
-    fill.style.background = 'linear-gradient(90deg, var(--green-dark), var(--green), #2dd4a4)';
+    pctStat.style.color = 'var(--gold)';
+    fill.style.background = 'linear-gradient(90deg, #854F0B, var(--gold), #FAC775)'; // gold tier — new level
     scholar.style.display = 'flex';
   }
 
